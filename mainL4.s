@@ -109,7 +109,7 @@ display2:
     MOVF    CONT3, 0	    ; Mover valor de CONT3 a W
     SUBLW   6		    ; Restar 6 al valor de W
     BTFSS   STATUS, 2	    ; Evaluar bandera ZERO
-    GOTO    $+5		    ; Saltar a quinta instrucción siguiente si ZERO = 0
+    GOTO    $+4		    ; Saltar a quinta instrucción siguiente si ZERO = 0
     CLRF    CONT3	    ; Limpiar variable CONT3
     MOVLW   00111111B	    ; Mover literal indicada a W
     MOVWF   PORTC	    ; Mover valor de W a PORTC

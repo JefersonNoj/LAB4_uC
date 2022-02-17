@@ -2558,7 +2558,7 @@ display2:
     MOVF CONT3, 0 ; Mover valor de CONT3 a W
     SUBLW 6 ; Restar 6 al valor de W
     BTFSS STATUS, 2 ; Evaluar bandera ((STATUS) and 07Fh), 2
-    GOTO $+5 ; Saltar a quinta instrucción siguiente si ((STATUS) and 07Fh), 2 = 0
+    GOTO $+4 ; Saltar a quinta instrucción siguiente si ((STATUS) and 07Fh), 2 = 0
     CLRF CONT3 ; Limpiar variable CONT3
     MOVLW 00111111B ; Mover literal indicada a W
     MOVWF PORTC ; Mover valor de W a PORTC
@@ -2572,11 +2572,11 @@ main:
     CALL config_clk ; Configuración del reloj
     CALL config_io ; Configuración de entradas y salidas
     CALL config_tmr0 ; Configuración de TMR0
-    CALL config_IocRB
-    CALL config_INT ; Configuración de interrupción
-    CLRF CONT
-    CLRF CONT2
-    CLRF CONT3
+    CALL config_IocRB ; Configuración de interruciones ON-CHANGE
+    CALL config_INT ; Configuración de interrupciones
+    CLRF CONT ; Limpiar variable CONT
+    CLRF CONT2 ; Limpiar variable CONT2
+    CLRF CONT3 ; Limpiar variable CONT3
     BANKSEL PORTA
 
 ;-------- LOOP RRINCIPAL --------
@@ -2599,34 +2599,34 @@ config_io:
     BANKSEL TRISA
     CLRF TRISA ; PORTA como salida
     CLRF TRISC ; PORTC como salida
-    CLRF TRISD
-    BSF TRISB, 3 ; ((PORTB) and 07Fh), 0 como entrada
-    BSF TRISB, 7 ; ((PORTB) and 07Fh), 1 como entrada
+    CLRF TRISD ; PORTD como salida
+    BSF TRISB, 3 ; ((PORTB) and 07Fh), 3 como entrada
+    BSF TRISB, 7 ; ((PORTB) and 07Fh), 7 como entrada
     BCF OPTION_REG, 7 ; Habilitación de Pull-ups en PORTB
-    BSF WPUB, 3 ; Habilitar Pull-up para ((PORTB) and 07Fh), 0
-    BSF WPUB, 7 ; Habilitar Pull-up para ((PORTB) and 07Fh), 1
+    BSF WPUB, 3 ; Habilitar Pull-up para ((PORTB) and 07Fh), 3
+    BSF WPUB, 7 ; Habilitar Pull-up para ((PORTB) and 07Fh), 7
     BANKSEL PORTA
     CLRF PORTA ; Limpiar PORTA
     CLRF PORTC ; Limpiar PORTC
-    CLRF PORTD
+    CLRF PORTD ; Limpiar PORTD
     RETURN
 
 config_IocRB:
-    BANKSEL IOCB
-    BSF IOCB, 3
-    BSF IOCB, 7
-    BANKSEL INTCON
-    MOVF PORTB, 0
-    BCF ((INTCON) and 07Fh), 0
+    BANKSEL IOCB ; Cambiar a banco 01
+    BSF IOCB, 3 ; Habilitar interrupción ON-CHANGE para ((PORTB) and 07Fh), 3
+    BSF IOCB, 7 ; Hablitiar interrupción ON-CHANGE para ((PORTB) and 07Fh), 7
+    BANKSEL INTCON ; Cambiar a banco 00
+    MOVF PORTB, 0 ; Mover valor de PORTB a W
+    BCF ((INTCON) and 07Fh), 0 ; Limpiar bandera de interrupciones ON-CHANGE
     RETURN
 
 config_INT:
-    BANKSEL INTCON
-    BSF ((INTCON) and 07Fh), 7
-    BSF ((INTCON) and 07Fh), 3
-    BCF ((INTCON) and 07Fh), 0
-    BSF ((INTCON) and 07Fh), 5
-    BCF ((INTCON) and 07Fh), 2
+    BANKSEL INTCON ; Cambiar a banco 00
+    BSF ((INTCON) and 07Fh), 7 ; Habilitar interrupciones globales
+    BSF ((INTCON) and 07Fh), 3 ; Habilitar interrupciones ON-CHANGE del PORTB
+    BCF ((INTCON) and 07Fh), 0 ; Limpiar bandera de interrupciones ON-CHANGE
+    BSF ((INTCON) and 07Fh), 5 ; Habilitar interrupcion de overflow del TMR0
+    BCF ((INTCON) and 07Fh), 2 ; Limpiar bandera de interrución del TMR0
     RETURN
 
 config_tmr0:
@@ -2642,7 +2642,7 @@ config_tmr0:
 ORG 200h ; Establecer posición para la tabla
 tabla:
     CLRF PCLATH ; Limpiar registro PCLATH
-    BSF PCLATH, 1 ; Posicionar PC
+    BSF PCLATH, 1 ; Posicionar PC en 0x02xxh
     ANDLW 0x0F ; AND entre W y literal 0x0F
     ADDWF PCL ; ADD entre W y PCL
     RETLW 00111111B ; 0 en 7 seg
