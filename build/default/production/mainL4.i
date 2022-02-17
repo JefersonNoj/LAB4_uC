@@ -2489,7 +2489,6 @@ PSECT udata_bank0
   CONT: DS 1 ; Contador
   CONT2: DS 1
   CONT3: DS 1
-  CONT4: DS 1
 
 PSECT udata_shr
   W_TEMP: DS 1
@@ -2522,48 +2521,47 @@ pop:
     RETFIE
 ;------ Subrutinas de interrupición -----
 int_IocB:
-    BTFSS PORTB, 3
-    INCF PORTA
-    BTFSS PORTB, 7
-    DECF PORTA
-    BCF ((INTCON) and 07Fh), 0
+    BTFSS PORTB, 3 ; Evaluar estado de boton en ((PORTB) and 07Fh), 3
+    INCF PORTA ; Incrementar contador en PORTA
+    BTFSS PORTB, 7 ; Evaluar estado de boton en ((PORTB) and 07Fh), 7
+    DECF PORTA ; Decrementar contador en PORTA
+    BCF ((INTCON) and 07Fh), 0 ; Limpiar bandera de interrupción
     RETURN
 
 int_tmr0:
-    reset_tmr0
-    INCF CONT
-    MOVF CONT, 0
-    SUBLW 50
-    BTFSC STATUS, 2
-    CALL display1
+    reset_tmr0 ; Reiniciar TMR0
+    INCF CONT ; Aumentar variable CONT
+    MOVF CONT, 0 ; Mover valor de CONT a W
+    SUBLW 50 ; Restar 50 al valor de W
+    BTFSC STATUS, 2 ; Evaluar bandera ((STATUS) and 07Fh), 2
+    CALL display1 ; Ir a subrutina indicada si ((STATUS) and 07Fh), 2 = 1
     RETURN
 
 display1:
-    CLRF CONT
-    INCF CONT2
-    MOVF CONT2, 0
-    CALL tabla
-    MOVWF PORTD
-    MOVF CONT2, 0
-    SUBLW 10
-    BTFSC STATUS, 2
-    CALL display2
+    CLRF CONT ; Limpiar variable CONT
+    INCF CONT2 ; Aumentar variable CONT2
+    MOVF CONT2, 0 ; Mover valor de CONT2 a W
+    CALL tabla ; Buscar valor de W equivalente, en la tabla
+    MOVWF PORTD ; Mover valor equivalente (7 seg) a PORTD
+    MOVF CONT2, 0 ; Mover valor de CONT2 a W
+    SUBLW 10 ; Restar 10 al valor de W
+    BTFSC STATUS, 2 ; Evaluar bandera ((STATUS) and 07Fh), 2
+    CALL display2 ; Ir a subrutina indicada si ((STATUS) and 07Fh), 2 = 1
     RETURN
 
 display2:
-    CLRF CONT2
-    INCF CONT3
-    MOVF CONT3, 0
-    CALL tabla
-    MOVWF PORTC
-    MOVF CONT3, 0
-    SUBLW 6
-    BTFSS STATUS, 2
-    GOTO $+5
-    CLRF CONT3
-    MOVLW 00111111B
-    MOVWF PORTC
-    CLRF CONT2
+    CLRF CONT2 ; Limpiar variable CONT2
+    INCF CONT3 ; Aumentar variables CONT3
+    MOVF CONT3, 0 ; Mover valor de CONT3 a W
+    CALL tabla ; Buscar valor de W equivalente, en la tabla
+    MOVWF PORTC ; Mover valor equivalente (7 seg) a PORTD
+    MOVF CONT3, 0 ; Mover valor de CONT3 a W
+    SUBLW 6 ; Restar 6 al valor de W
+    BTFSS STATUS, 2 ; Evaluar bandera ((STATUS) and 07Fh), 2
+    GOTO $+5 ; Saltar a quinta instrucción siguiente si ((STATUS) and 07Fh), 2 = 0
+    CLRF CONT3 ; Limpiar variable CONT3
+    MOVLW 00111111B ; Mover literal indicada a W
+    MOVWF PORTC ; Mover valor de W a PORTC
     RETURN
 
 PSECT code, delta=2, abs

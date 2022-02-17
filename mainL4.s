@@ -37,25 +37,24 @@ reset_tmr0 MACRO
     ENDM
 
 PSECT udata_bank0	
-  CONT:		DS 1		; Contador
+  CONT:		DS 1	    ; Contador
   CONT2:	DS 1
   CONT3:	DS 1
-  CONT4:	DS 1
 
 PSECT udata_shr
-  W_TEMP:	DS 1
+  W_TEMP:	DS 1		
   STATUS_TEMP:	DS 1
 
 PSECT resVect, class=CODE, abs, delta=2
 ;-------- VECTOR RESET ----------
-ORG 00h			; Posición 0000h para el reset
+ORG 00h			    ; Posición 0000h para el reset
 resetVec:
     PAGESEL main
     GOTO main
 
 PSECT intVect, class=CODE, abs, delta=2
 ;-------- INTERRUPT VECTOR ----------
-ORG 04h			; Posición 0004h para interrupciones
+ORG 04h			    ; Posición 0004h para interrupciones
 push:
     MOVWF   W_TEMP
     SWAPF   STATUS, 0
@@ -73,63 +72,62 @@ pop:
     RETFIE
 ;------ Subrutinas de interrupición -----
 int_IocB:
-    BTFSS   PORTB, 3
-    INCF    PORTA 
-    BTFSS   PORTB, 7
-    DECF    PORTA
-    BCF	    RBIF 
+    BTFSS   PORTB, 3	    ; Evaluar estado de boton en RB3
+    INCF    PORTA	    ; Incrementar contador en PORTA
+    BTFSS   PORTB, 7	    ; Evaluar estado de boton en RB7
+    DECF    PORTA	    ; Decrementar contador en PORTA
+    BCF	    RBIF	    ; Limpiar bandera de interrupción 
     RETURN
 
 int_tmr0:
-    reset_tmr0
-    INCF    CONT
-    MOVF    CONT, 0
-    SUBLW   50
-    BTFSC   STATUS, 2
-    CALL    display1
+    reset_tmr0		    ; Reiniciar TMR0
+    INCF    CONT	    ; Aumentar variable CONT
+    MOVF    CONT, 0	    ; Mover valor de CONT a W
+    SUBLW   50		    ; Restar 50 al valor de W
+    BTFSC   STATUS, 2	    ; Evaluar bandera ZERO
+    CALL    display1	    ; Ir a subrutina indicada si ZERO = 1
     RETURN
 
 display1:
-    CLRF    CONT
-    INCF    CONT2
-    MOVF    CONT2, 0
-    CALL    tabla
-    MOVWF   PORTD
-    MOVF    CONT2, 0
-    SUBLW   10
-    BTFSC   STATUS, 2
-    CALL    display2
+    CLRF    CONT	    ; Limpiar variable CONT
+    INCF    CONT2	    ; Aumentar variable CONT2
+    MOVF    CONT2, 0	    ; Mover valor de CONT2 a W
+    CALL    tabla	    ; Buscar valor de W equivalente, en la tabla
+    MOVWF   PORTD	    ; Mover valor equivalente (7 seg) a PORTD
+    MOVF    CONT2, 0	    ; Mover valor de CONT2 a W
+    SUBLW   10		    ; Restar 10 al valor de W
+    BTFSC   STATUS, 2	    ; Evaluar bandera ZERO
+    CALL    display2	    ; Ir a subrutina indicada si ZERO = 1
     RETURN
 
 display2:
-    CLRF    CONT2
-    INCF    CONT3
-    MOVF    CONT3, 0
-    CALL    tabla
-    MOVWF   PORTC
-    MOVF    CONT3, 0
-    SUBLW   6
-    BTFSS   STATUS, 2
-    GOTO    $+5
-    CLRF    CONT3
-    MOVLW   00111111B
-    MOVWF   PORTC
-    CLRF    CONT2
+    CLRF    CONT2	    ; Limpiar variable CONT2
+    INCF    CONT3	    ; Aumentar variables CONT3
+    MOVF    CONT3, 0	    ; Mover valor de CONT3 a W
+    CALL    tabla	    ; Buscar valor de W equivalente, en la tabla
+    MOVWF   PORTC	    ; Mover valor equivalente (7 seg) a PORTD 
+    MOVF    CONT3, 0	    ; Mover valor de CONT3 a W
+    SUBLW   6		    ; Restar 6 al valor de W
+    BTFSS   STATUS, 2	    ; Evaluar bandera ZERO
+    GOTO    $+5		    ; Saltar a quinta instrucción siguiente si ZERO = 0
+    CLRF    CONT3	    ; Limpiar variable CONT3
+    MOVLW   00111111B	    ; Mover literal indicada a W
+    MOVWF   PORTC	    ; Mover valor de W a PORTC
     RETURN
 
 PSECT code, delta=2, abs
-ORG 100h		; Posición 0100h para el código
+ORG 100h		    ; Posición 0100h para el código
 
 ;-------- CONFIGURACION --------
 main:
     CALL    config_clk	    ; Configuración del reloj
     CALL    config_io	    ; Configuración de entradas y salidas
     CALL    config_tmr0	    ; Configuración de TMR0
-    CALL    config_IocRB
-    CALL    config_INT	    ; Configuración de interrupción
-    CLRF    CONT
-    CLRF    CONT2
-    CLRF    CONT3
+    CALL    config_IocRB    ; Configuración de interruciones ON-CHANGE
+    CALL    config_INT	    ; Configuración de interrupciones
+    CLRF    CONT	    ; Limpiar variable CONT
+    CLRF    CONT2	    ; Limpiar variable CONT2
+    CLRF    CONT3	    ; Limpiar variable CONT3
     BANKSEL PORTA
 
 ;-------- LOOP RRINCIPAL --------
@@ -152,34 +150,34 @@ config_io:
     BANKSEL TRISA
     CLRF    TRISA	    ; PORTA como salida
     CLRF    TRISC	    ; PORTC como salida
-    CLRF    TRISD
-    BSF	    TRISB, 3	    ; RB0 como entrada
-    BSF	    TRISB, 7	    ; RB1 como entrada
+    CLRF    TRISD	    ; PORTD como salida
+    BSF	    TRISB, 3	    ; RB3 como entrada
+    BSF	    TRISB, 7	    ; RB7 como entrada
     BCF	    OPTION_REG, 7   ; Habilitación de Pull-ups en PORTB
-    BSF	    WPUB, 3	    ; Habilitar Pull-up para RB0
-    BSF	    WPUB, 7	    ; Habilitar Pull-up para RB1
+    BSF	    WPUB, 3	    ; Habilitar Pull-up para RB3
+    BSF	    WPUB, 7	    ; Habilitar Pull-up para RB7
     BANKSEL PORTA
     CLRF    PORTA	    ; Limpiar PORTA
     CLRF    PORTC	    ; Limpiar PORTC
-    CLRF    PORTD
+    CLRF    PORTD	    ; Limpiar PORTD
     RETURN
 
 config_IocRB:
-    BANKSEL IOCB
-    BSF	    IOCB, 3
-    BSF	    IOCB, 7
-    BANKSEL INTCON
-    MOVF    PORTB, 0
-    BCF	    RBIF
+    BANKSEL IOCB	    ; Cambiar a banco 01
+    BSF	    IOCB, 3	    ; Habilitar interrupción ON-CHANGE para RB3
+    BSF	    IOCB, 7	    ; Hablitiar interrupción ON-CHANGE para RB7
+    BANKSEL INTCON	    ; Cambiar a banco 00
+    MOVF    PORTB, 0	    ; Mover valor de PORTB a W
+    BCF	    RBIF	    ; Limpiar bandera de interrupciones ON-CHANGE
     RETURN
 
 config_INT:
-    BANKSEL INTCON  
-    BSF	    GIE
-    BSF	    RBIE
-    BCF	    RBIF
-    BSF	    T0IE
-    BCF	    T0IF
+    BANKSEL INTCON	    ; Cambiar a banco 00
+    BSF	    GIE		    ; Habilitar interrupciones globales
+    BSF	    RBIE	    ; Habilitar interrupciones ON-CHANGE del PORTB
+    BCF	    RBIF	    ; Limpiar bandera de interrupciones ON-CHANGE
+    BSF	    T0IE	    ; Habilitar interrupcion de overflow del TMR0
+    BCF	    T0IF	    ; Limpiar bandera de interrución del TMR0
     RETURN
 
 config_tmr0:
@@ -195,7 +193,7 @@ config_tmr0:
 ORG 200h		    ; Establecer posición para la tabla
 tabla:
     CLRF    PCLATH	    ; Limpiar registro PCLATH
-    BSF	    PCLATH, 1	    ; Posicionar PC 
+    BSF	    PCLATH, 1	    ; Posicionar PC en 0x02xxh
     ANDLW   0x0F	    ; AND entre W y literal 0x0F
     ADDWF   PCL		    ; ADD entre W y PCL 
     RETLW   00111111B	    ; 0	en 7 seg
