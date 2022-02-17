@@ -38,6 +38,9 @@ reset_tmr0 MACRO
 
 PSECT udata_bank0	
   CONT:		DS 1		; Contador
+  CONT2:	DS 1
+  CONT3:	DS 1
+  CONT4:	DS 1
 
 PSECT udata_shr
   W_TEMP:	DS 1
@@ -82,10 +85,36 @@ int_tmr0:
     INCF    CONT
     MOVF    CONT, 0
     SUBLW   50
-    BTFSS   STATUS, 2
-    GOTO    $+3
+    BTFSC   STATUS, 2
+    CALL    display1
+    RETURN
+
+display1:
     CLRF    CONT
-    INCF    PORTC
+    INCF    CONT2
+    MOVF    CONT2, 0
+    CALL    tabla
+    MOVWF   PORTD
+    MOVF    CONT2, 0
+    SUBLW   10
+    BTFSC   STATUS, 2
+    CALL    display2
+    RETURN
+
+display2:
+    CLRF    CONT2
+    INCF    CONT3
+    MOVF    CONT3, 0
+    CALL    tabla
+    MOVWF   PORTC
+    MOVF    CONT3, 0
+    SUBLW   6
+    BTFSS   STATUS, 2
+    GOTO    $+5
+    CLRF    CONT3
+    MOVLW   00111111B
+    MOVWF   PORTC
+    CLRF    CONT2
     RETURN
 
 PSECT code, delta=2, abs
@@ -99,6 +128,8 @@ main:
     CALL    config_IocRB
     CALL    config_INT	    ; Configuración de interrupción
     CLRF    CONT
+    CLRF    CONT2
+    CLRF    CONT3
     BANKSEL PORTA
 
 ;-------- LOOP RRINCIPAL --------
@@ -121,6 +152,7 @@ config_io:
     BANKSEL TRISA
     CLRF    TRISA	    ; PORTA como salida
     CLRF    TRISC	    ; PORTC como salida
+    CLRF    TRISD
     BSF	    TRISB, 3	    ; RB0 como entrada
     BSF	    TRISB, 7	    ; RB1 como entrada
     BCF	    OPTION_REG, 7   ; Habilitación de Pull-ups en PORTB
@@ -129,6 +161,7 @@ config_io:
     BANKSEL PORTA
     CLRF    PORTA	    ; Limpiar PORTA
     CLRF    PORTC	    ; Limpiar PORTC
+    CLRF    PORTD
     RETURN
 
 config_IocRB:
@@ -158,5 +191,28 @@ config_tmr0:
     BSF	    PS0		    ; Prescaler/111/1:256
     reset_tmr0		    
     RETURN 
+
+ORG 200h		    ; Establecer posición para la tabla
+tabla:
+    CLRF    PCLATH	    ; Limpiar registro PCLATH
+    BSF	    PCLATH, 1	    ; Posicionar PC 
+    ANDLW   0x0F	    ; AND entre W y literal 0x0F
+    ADDWF   PCL		    ; ADD entre W y PCL 
+    RETLW   00111111B	    ; 0	en 7 seg
+    RETLW   00000110B	    ; 1 en 7 seg
+    RETLW   01011011B	    ; 2 en 7 seg
+    RETLW   01001111B	    ; 3 en 7 seg
+    RETLW   01100110B	    ; 4 en 7 seg
+    RETLW   01101101B	    ; 5 en 7 seg
+    RETLW   01111101B	    ; 6 en 7 seg
+    RETLW   00000111B	    ; 7 en 7 seg
+    RETLW   01111111B	    ; 8 en 7 seg
+    RETLW   01101111B	    ; 9 en 7 seg
+    RETLW   00111111B	    ; 10 en 7 seg
+    RETLW   01111100B	    ; 11 en 7 seg
+    RETLW   00111001B	    ; 12 en 7 seg
+    RETLW   01011110B	    ; 13 en 7 seg
+    RETLW   01111001B	    ; 14 en 7 seg
+    RETLW   01110001B	    ; 15 en 7 seg
 
 END
