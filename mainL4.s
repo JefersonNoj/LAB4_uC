@@ -3,7 +3,7 @@
 ; Autor:	Jeferson Noj
 ; Compilador:	pic-as (v2.30), MPLABX V5.40
 ;
-; Programa:	Contador en PORTA con TMR0 e interrupción
+; Programa:	Contador en PORTA (On Change) y contador en PORTC con TMR0
 ; Hardware:	LEDs en PORTA y pushbuttons en PORTB
 ;
 ; Creado: 15 feb, 2022
@@ -28,6 +28,14 @@ PROCESSOR 16F887
   CONFIG  BOR4V = BOR40V        ; Brown-out Reset Selection bit (Brown-out Reset set to 4.0V)
   CONFIG  WRT = OFF             ; Flash Program Memory Self Write Enable bits (Write protection off)
 
+reset_tmr0 MACRO
+    BANKSEL TMR0	    ; cambiamos de banco
+    MOVLW   178		    ; 20ms = 4(1/4Mhz)(256-N)(256)
+			    ; N = 256 - (20ms*4Mhz)/(4*256) = 157
+    MOVWF   TMR0	    ; configuramos tiempo de retardo
+    BCF	    T0IF	    ; limpiamos bandera de interrupción
+    ENDM
+
 PSECT udata_bank0	
   CONT:		DS 1		; Contador
 
@@ -49,13 +57,16 @@ push:
     MOVWF   W_TEMP
     SWAPF   STATUS, 0
     MOVWF   STATUS_TEMP
-isr:
-    BTFSC   RBIF
-    CALL    int_IocB
-pop:
+isr: 
+    BTFSC   T0IF	    ; Interrupción del TMR0? No=0 SI=1
+    CALL    int_tmr0	    ; Si -> Subrutina con código a ejecutar 
+    BTFSC   RBIF	    ; Interrupción del PORTB? No=0 Si=1
+    CALL    int_IocB	    ; Si -> Subrutina con codigo a ejecutar
+pop:			   
     SWAPF   STATUS_TEMP,0
     MOVWF   STATUS
-    MOVF    W_TEMP, 0
+    SWAPF   W_TEMP, 1
+    SWAPF   W_TEMP, 0
     RETFIE
 ;------ Subrutinas de interrupición -----
 int_IocB:
@@ -66,6 +77,17 @@ int_IocB:
     BCF	    RBIF 
     RETURN
 
+int_tmr0:
+    reset_tmr0
+    INCF    CONT
+    MOVF    CONT, 0
+    SUBLW   50
+    BTFSS   STATUS, 2
+    GOTO    $+3
+    CLRF    CONT
+    INCF    PORTC
+    RETURN
+
 PSECT code, delta=2, abs
 ORG 100h		; Posición 0100h para el código
 
@@ -73,8 +95,10 @@ ORG 100h		; Posición 0100h para el código
 main:
     CALL    config_clk	    ; Configuración del reloj
     CALL    config_io	    ; Configuración de entradas y salidas
+    CALL    config_tmr0	    ; Configuración de TMR0
     CALL    config_IocRB
     CALL    config_INT	    ; Configuración de interrupción
+    CLRF    CONT
     BANKSEL PORTA
 
 ;-------- LOOP RRINCIPAL --------
@@ -84,8 +108,8 @@ loop:
 ;---------- SUBRUTINAS ----------
 config_clk:
     BANKSEL OSCCON
-    BSF	    IRCF2	    ; IRCF/100/1MHz (frecuencia de oscilación)
-    BCF	    IRCF1
+    BSF	    IRCF2	    ; IRCF/110/4MHz (frecuencia de oscilación)
+    BSF	    IRCF1
     BCF	    IRCF0
     BSF	    SCS		    ; Reloj interno
     RETURN
@@ -95,7 +119,8 @@ config_io:
     CLRF    ANSEL	    ; I/O digitales
     CLRF    ANSELH
     BANKSEL TRISA
-    CLRF    TRISA	    ; PORTA como salidas
+    CLRF    TRISA	    ; PORTA como salida
+    CLRF    TRISC	    ; PORTC como salida
     BSF	    TRISB, 3	    ; RB0 como entrada
     BSF	    TRISB, 7	    ; RB1 como entrada
     BCF	    OPTION_REG, 7   ; Habilitación de Pull-ups en PORTB
@@ -103,6 +128,7 @@ config_io:
     BSF	    WPUB, 7	    ; Habilitar Pull-up para RB1
     BANKSEL PORTA
     CLRF    PORTA	    ; Limpiar PORTA
+    CLRF    PORTC	    ; Limpiar PORTC
     RETURN
 
 config_IocRB:
@@ -119,6 +145,18 @@ config_INT:
     BSF	    GIE
     BSF	    RBIE
     BCF	    RBIF
+    BSF	    T0IE
+    BCF	    T0IF
     RETURN
+
+config_tmr0:
+    BANKSEL OPTION_REG
+    BCF	    T0CS	    ; Selección de reloj interno
+    BCF	    PSA		    ; Asignación del Prescaler a TMR0
+    BSF	    PS2
+    BSF	    PS1
+    BSF	    PS0		    ; Prescaler/111/1:256
+    reset_tmr0		    
+    RETURN 
 
 END
