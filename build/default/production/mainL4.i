@@ -2481,16 +2481,16 @@ reset_tmr0 MACRO
     BANKSEL TMR0 ; cambiamos de banco
     MOVLW 178 ; 20ms = 4(1/4Mhz)(256-N)(256)
        ; N = 256 - (20ms*4Mhz)/(4*256) = 157
-    MOVWF TMR0 ; configuramos tiempo de retardo
+    MOVWF TMR0 ; Configurar tiempo de retardo
     BCF ((INTCON) and 07Fh), 2 ; limpiamos bandera de interrupción
     ENDM
 
-PSECT udata_bank0
+PSECT udata_bank0 ; Memoria común
   CONT: DS 1 ; Contador
   CONT2: DS 1
   CONT3: DS 1
 
-PSECT udata_shr
+PSECT udata_shr ; Memoria compartida
   W_TEMP: DS 1
   STATUS_TEMP: DS 1
 
